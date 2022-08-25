@@ -1,0 +1,34 @@
+profile: run
+
+ceip_policy_disclosed: true
+
+shared:
+  ingress_domain: run.it-tap.terasky.demo
+  ca_cert_data: |
+    -----BEGIN CERTIFICATE-----
+    MIIDojCCAoqgAwIBAgIQSQ5hCqC2GqhFn+ZNGqdPkTANBgkqhkiG9w0BAQsFADBP
+    MRQwEgYKCZImiZPyLGQBGRYEZGVtbzEXMBUGCgmSJomT8ixkARkWB3RlcmFza3kx
+    HjAcBgNVBAMTFXRlcm...
+    -----END CERTIFICATE-----
+
+supply_chain: testing_scanning
+
+contour:
+  envoy:
+    service:
+      type: LoadBalancer
+
+cnrs:
+  domain_name: run.it-tap.terasky.demo
+  domain_template: "{{.Name}}-{{.Namespace}}.{{.Domain}}"
+  default_tls_secret: kube-system/tap-wildcard-cert
+
+appliveview_connector:
+  backend:
+    sslDisabled: false
+    host: appliveview.run.it-tap.terasky.demo
+
+package_overlays:
+- name: cnrs
+  secrets:
+  - name: overlay-cnrs

@@ -1,0 +1,9 @@
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageRepository
+metadata:
+  name: tbs-full-deps-repository
+  namespace: tap-install
+spec:
+  fetch:
+    imgpkgBundle:
+      image: it-tkg-harbor.terasky.demo/tap/tbs-full-deps:1.6.1

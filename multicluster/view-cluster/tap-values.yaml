@@ -1,0 +1,96 @@
+profile: view
+
+ceip_policy_disclosed: true
+
+shared:
+  ingress_domain: it-tap.terasky.demo
+  ca_cert_data: |
+    -----BEGIN CERTIFICATE-----
+    MIIDojCCAoqgAwIBAgIQSQ5hCqC2GqhFn+ZNGqdPkTANBgkqhkiG9w0BAQsFADBP
+    MRQwEgYKCZImiZPyLGQBGRYEZGVtbzEXMBUGCgmSJomT8ixkARkWB3RlcmFza3kx
+    HjAcBgNVBAMTFXRlcm...
+    -----END CERTIFICATE-----
+
+contour:
+  envoy:
+    service:
+      type: LoadBalancer
+
+accelerator:
+  domain: it-tap.terasky.demo
+  ingress:
+    include: true
+    enable_tls: false
+  tls:
+    secret_name: tap-gui-tls
+    namespace: tap-gui
+
+tap_gui:
+  service_type: ClusterIP
+  tls:
+    namespace: tap-gui
+    secretName: tap-gui-tls
+  app_config:
+    proxy:
+      /metadata-store:
+        target: https://metadata-store-app.metadata-store:8443/api/v1
+        changeOrigin: true
+        secure: false
+        headers:
+          Authorization: "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImpXNDlhWEhHNC1DSERSckp2ekVhSVpQYnk5em1VUGlZcFRHLU84eHdyV1EifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJtZXRhZGF0YS1zdG9yZSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJtZXRhZGF0YS1zdG9yZS1yZWFkLWNsaWVudC10b2tlbi1rNW12biIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJtZXRhZGF0YS1zdG9yZS1yZWFkLWNsaWVudCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6ImM1ODNlMDJiLWMzMDktNDI3Mi05NzI2LTMyMmZhM2U5OWQwYiIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDptZXRhZGF0YS1zdG9yZTptZXRhZGF0YS1zdG9yZS1yZWFkLWNsaWVudCJ9.MCkvDGKbgFDP5iTXLFm9cNLW_LwwtF8n_x6ajj0Stj-0LoO3MXGfTakt68hwyb1thdLqqllXgSkw9wy4SQO1JPK025lmzc0txtgjHJW4k5FocSlXxpGIkDNkGWTWiNVMbp2gHy7jXr8ZJ_GCShYWamVfxVMaYNXgqtNFhzqAQvG9t3nFfd7cDLg05k71hNicdtAkKXZxhVXPDPftfUDAA9XcK2IN7VTf8XhEHURww8dZsrVpdwqAuWiSYUBs99FxY-_Db64s9epwpRCigdXeCCxYdWrSOWMLrmZdHAr__7iPfossDqAB2GBu4vWkIyONqQwYbsK5-L6xTnglaDogaw"
+          X-Custom-Source: project-star
+    app:
+      baseUrl: https://tap-gui.it-tap.terasky.demo
+    integrations:
+      github:
+      - host: github.com
+        token: your-github-token
+    catalog:
+      locations:
+        - type: url
+          target: https://github.com/itaytalmi/tap-gui-catalog/blob/main/blank/catalog-info.yaml
+    backend:
+      baseUrl: https://tap-gui.it-tap.terasky.demo
+      cors:
+        origin: https://tap-gui.it-tap.terasky.demo
+      database:
+        client: pg
+        connection:
+          host: tap-gui-db-cls.tap-gui-db.svc.cluster.local
+          port: 5432
+          user: postgres
+          password: your-postgres-database-password
+          ssl: false
+    auth:
+      allowGuestAccess: true
+      environment: tap_gui
+      providers:
+        github:
+          tap_gui:
+            clientId: your-github-app-client-id
+            clientSecret: your-github-app-client-secret
+      loginPage:
+        github:
+          title: GitHub Login
+          message: Sign in using your GitHub account
+    kubernetes:
+      serviceLocatorMethod:
+        type: 'multiTenant'
+      clusterLocatorMethods:
+      - type: 'config'
+        clusters:
+        - url: https://10.100.154.13:6443
+          name: it-tap-build-cls
+          authProvider: serviceAccount
+          serviceAccountToken: eyJhbGciOiJSUzI1NiIsImtpZCI6ImtDV1hJR0FWbGU1UGxtcWZ5R3prbHRkTlc5WVJwQWxremlLTEdhbUpWUEUifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJ0YXAtZ3VpIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6InRhcC1ndWktdmlld2VyLXRva2VuLTZ0bnh0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6InRhcC1ndWktdmlld2VyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiYjAxMDVlZmItNzlmZS00MTY5LWEzYmEtZGE0N2JiYmE5NTg4Iiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OnRhcC1ndWk6dGFwLWd1aS12aWV3ZXIifQ.tg_0ClmcpUx5X0UwXIvvNVQ4x9Vdfp4sHd4M4F6YBzaSiwpMT8J0vs9WLDrUfD8u4euzJxuw7Jz8dgWdHTnxtB671CevtaF8tX_tSxcfeSDWaBwVUcqD1euQRIjlnTeJ78nzPSBhQ3gPEU46xOWLJd3DbFoMgYJ3Qnvr5d2lhg01PuWX1dnooGeLIhpO0eblTP-T94y80TemyvTtXCCCg1qYtlvWVM77gqqTI633WmV93BhQOIHULYnRRPP_1GlzID0dou8Z0YCXv3YRTtlrYsnWbXvjNON82VZlqsxxbwPw7BuKKqUA2tH0ISMJ4VvTn52izYPI9kws3vpxI0yhDg
+          skipTLSVerify: true
+        - url: https://10.100.154.12:6443
+          name: it-tap-run-cls
+          authProvider: serviceAccount
+          serviceAccountToken: eyJhbGciOiJSUzI1NiIsImtpZCI6ImJJM0RlcTUyRGREWksxMHFHX1VEOGgxRnlEZnlSdmNYS2FUS1M4T2ZlWTQifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJ0YXAtZ3VpIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6InRhcC1ndWktdmlld2VyLXRva2VuLWNmbjQyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6InRhcC1ndWktdmlld2VyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiZjM3ZDI5NDEtZmQ2NC00NWFjLTg3YTYtNjAzZTBkYWRiNDU5Iiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OnRhcC1ndWk6dGFwLWd1aS12aWV3ZXIifQ.mJVq6zmBGypMqupXJGquqY2tJAZ5_Bdw41eMCEad84LJynJiZh-cPrQWYXK-I0zDx1YtzTPjAw5MA1HoOipFhXD5Rk5QcGj4PRDbGP_1DLdrfMyIR5-0h1JipNcAh0QdOaZDwoYDXkR8JTRFeh89Xj1NfyWJ3iokXAIySMTZc2GdLpUH8z51aQguDkSVzHJwsGG_5YjsYgRopVZoC_f4dpyJAe9P0eTwXxsKXfpgOe9OkGd2VBZZ4ZVG6assbCcsJjEKftNCq565KogNGz_SqK7mhVqp4h0UwBxrAxL0GIh2paSiHUNY3jxQ43XLEh_0xz_H5FKthuhbjUp4390NOw
+          skipTLSVerify: true
+        - url: https://10.100.154.18:6443
+          name: it-tap-iterate-cls
+          authProvider: serviceAccount
+          serviceAccountToken: eyJhbGciOiJSUzI1NiIsImtpZCI6IkljcVo5dUFyRENvYWJKMl9YRlNwXzVnRWhodlg0Y0oxdlJQODc4Mld2MUkifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJ0YXAtZ3VpIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6InRhcC1ndWktdmlld2VyLXRva2VuLW50MjR6Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6InRhcC1ndWktdmlld2VyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiMzAwZTIzZDAtNGVmNC00NDQ1LTk2YWItZDkxNGY1MTZmMjVhIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OnRhcC1ndWk6dGFwLWd1aS12aWV3ZXIifQ.g3SM2hCHXpusjzy83ijrdShNFIbO3CzIglb_awwb8pPjhtw2fkGRZsWObEPuyYgHn1W16GauJFq1GUA2s5PTGjCVyWu-QczmqPg59ukI433IC8rOxA4LsQxY1oKPO6DkBVoS-ze3fI6M0JbUWAEf8L9R7yddUXhk-8jQw_3BSoAAD8EbUp_thm8UkZ_paMEh-blZn_-3dNqs4QW1ByT9OmkMbIQM2JaEvSY72T3yUqN0SvnneJj3J9YQbifbvRMhwvK0UM4BKuQny71RtdikSWqYVNAMe4Ki_xcUqFswBAVb02ragKz9X3e7xVNG9qq3jMbrXBjNVSD1ZTFfoQIj4A
+          skipTLSVerify: true

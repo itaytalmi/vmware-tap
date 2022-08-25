@@ -1,0 +1,47 @@
+profile: iterate
+
+ceip_policy_disclosed: true
+
+shared:
+  ingress_domain: iterate.it-tap.terasky.demo
+  ca_cert_data: |
+    -----BEGIN CERTIFICATE-----
+    MIIDojCCAoqgAwIBAgIQSQ5hCqC2GqhFn+ZNGqdPkTANBgkqhkiG9w0BAQsFADBP
+    MRQwEgYKCZImiZPyLGQBGRYEZGVtbzEXMBUGCgmSJomT8ixkARkWB3RlcmFza3kx
+    HjAcBgNVBAMTFXRlcm...
+    -----END CERTIFICATE-----
+
+contour:
+  envoy:
+    service:
+      type: LoadBalancer
+
+cnrs:
+  domain_name: iterate.it-tap.terasky.demo
+  domain_template: "{{.Name}}-{{.Namespace}}.{{.Domain}}"
+  default_tls_secret: kube-system/tap-wildcard-cert
+
+appliveview_connector:
+  backend:
+    sslDisabled: false
+    host: appliveview.iterate.it-tap.terasky.demo
+
+buildservice:
+  kp_default_repository: it-tkg-harbor.terasky.demo/tap/build-service
+  kp_default_repository_username: tap-harbor-tbs
+  kp_default_repository_password: your-tbs-password
+  exclude_dependencies: true
+
+supply_chain: basic
+
+ootb_supply_chain_basic:
+  registry:
+    server: it-tkg-harbor.terasky.demo
+    repository: dev-team-01/workloads
+  gitops:
+    ssh_secret: git-creds
+
+package_overlays:
+- name: cnrs
+  secrets:
+  - name: overlay-cnrs

@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: postgres-psql-test
+  name: postgres-psql-test
+  namespace: tap-gui-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-psql-test
+  template:
+    metadata:
+      labels:
+        app: postgres-psql-test
+    spec:
+      imagePullSecrets:
+      - name: tap-registry
+      containers:
+      - image: ${PRIVATE_REGISTRY_HOSTNAME}/tap/postgres-operator/postgres:14
+        name: postgres
+        resources:
+          requests:
+            cpu: 10m
+            memory: 100Mi
+          limits:
+            cpu: 500m
+            memory: 500Mi
+        env:
+        - name: PGPASSWORD
+          value: ${POSTGRES_PASSWORD}
+        - name: PGUSER
+          value: postgres
+        - name: PGHOST
+          value: tap-gui-db-cls.tap-gui-db.svc.cluster.local
+        - name: PGDATABASE
+          value: postgres
+        - name: PGSSLMODE
+          value: require
+        command:
+          - psql
+        args:
+          - -c
+          - '\l'

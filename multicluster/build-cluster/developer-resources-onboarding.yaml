@@ -1,0 +1,165 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tap-registry
+  annotations:
+    secretgen.carvel.dev/image-pull-secret: ""
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: e30K
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+secrets:
+- name: registry-credentials
+imagePullSecrets:
+- name: registry-credentials
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: scanner-secret-ref
+  annotations:
+    secretgen.carvel.dev/image-pull-secret: ""
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: e30K
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
+metadata:
+  name: store-auth-token
+spec:
+  fromNamespace: metadata-store-secrets
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
+metadata:
+  name: store-ca-cert
+spec:
+  fromNamespace: metadata-store-secrets
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grype-scanner
+secrets:
+- name: tap-registry
+- name: store-ca-cert
+- name: store-auth-token
+imagePullSecrets:
+- name: scanner-secret-ref
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: default-permit-deliverable
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: deliverable
+subjects:
+- kind: ServiceAccount
+  name: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: default-permit-workload
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: workload
+subjects:
+- kind: ServiceAccount
+  name: default
+---
+apiVersion: scanning.apps.tanzu.vmware.com/v1beta1
+kind: ScanPolicy
+metadata:
+  name: scan-policy
+spec:
+  regoFile: |
+    package main
+
+    # Accepted Values: "Critical", "High", "Medium", "Low", "Negligible", "UnknownSeverity"
+    notAllowedSeverities := ["Critical"]
+    ignoreCves := []
+
+    contains(array, elem) = true {
+      array[_] = elem
+    } else = false { true }
+
+    isSafe(match) {
+      severities := { e | e := match.ratings.rating.severity } | { e | e := match.ratings.rating[_].severity }
+      some i
+      fails := contains(notAllowedSeverities, severities[i])
+      not fails
+    }
+
+    isSafe(match) {
+      ignore := contains(ignoreCves, match.id)
+      ignore
+    }
+
+    deny[msg] {
+      comps := { e | e := input.bom.components.component } | { e | e := input.bom.components.component[_] }
+      some i
+      comp := comps[i]
+      vulns := { e | e := comp.vulnerabilities.vulnerability } | { e | e := comp.vulnerabilities.vulnerability[_] }
+      some j
+      vuln := vulns[j]
+      ratings := { e | e := vuln.ratings.rating.severity } | { e | e := vuln.ratings.rating[_].severity }
+      not isSafe(vuln)
+      msg = sprintf("CVE %s %s %s", [comp.name, vuln.id, ratings])
+    }
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: developer-defined-tekton-pipeline
+  labels:
+    apps.tanzu.vmware.com/pipeline: test
+spec:
+  params:
+  - name: source-url
+  - name: source-revision
+  tasks:
+  - name: test
+    params:
+    - name: source-url
+      value: $(params.source-url)
+    - name: source-revision
+      value: $(params.source-revision)
+    taskSpec:
+      params:
+      - name: source-url
+      - name: source-revision
+      steps:
+      - image: it-tkg-harbor.terasky.demo/tap/gradle
+        name: test
+        resources: {}
+        script: |-
+          #!/bin/bash
+          cd `mktemp -d`
+          wget -qO- $(params.source-url) | tar xvz -m
+          if test -f "mvnw"; then
+            ./mvnw test
+          elif test -d "META-INF"; then
+            jar cvfm0 test2.jar META-INF/MANIFEST.MF *
+            nohup java -jar test2.jar > /dev/null 2>&1 &
+            serverPID=$!
+            sleep 10
+            status_code=$(curl --write-out %{http_code} --silent --output /dev/null http://localhost:8080)
+            if [ "$status_code" -eq 200 ]; then
+              echo "Got 200 response from java app!"
+            else
+              echo "Failed with Status Code $status_code"
+              exit 1
+            fi
+            kill $serverPID
+          else
+            echo No tests match this app. continuing on to scan.
+          fi

@@ -1,0 +1,47 @@
+profile: build
+
+ceip_policy_disclosed: true
+
+shared:
+  ca_cert_data: |
+    -----BEGIN CERTIFICATE-----
+    MIIDojCCAoqgAwIBAgIQSQ5hCqC2GqhFn+ZNGqdPkTANBgkqhkiG9w0BAQsFADBP
+    MRQwEgYKCZImiZPyLGQBGRYEZGVtbzEXMBUGCgmSJomT8ixkARkWB3RlcmFza3kx
+    HjAcBgNVBAMTFXRlcm...
+    -----END CERTIFICATE-----
+
+buildservice:
+  kp_default_repository: it-tkg-harbor.terasky.demo/tap/build-service
+  kp_default_repository_username: tap-harbor-tbs
+  kp_default_repository_password: your-tbs-password
+  exclude_dependencies: true
+
+supply_chain: testing_scanning
+
+ootb_supply_chain_testing_scanning:
+  registry:
+    server: it-tkg-harbor.terasky.demo
+    repository: dev-team-01/workloads
+  gitops:
+    ssh_secret: git-creds
+
+grype:
+  namespace: default
+  targetImagePullSecret: tap-registry
+  metadataStore:
+    url: https://metadata-store.it-tap.terasky.demo
+    caSecret:
+      name: store-ca-cert
+      importFromNamespace: metadata-store-secrets
+    authSecret:
+      name: store-auth-token
+      importFromNamespace: metadata-store-secrets
+
+scanning:
+  metadataStore:
+    url: ""
+
+package_overlays:
+- name: buildservice
+  secrets:
+  - name: overlay-cert-injection-webhook-scantemplates

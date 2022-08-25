@@ -1,0 +1,7 @@
+---
+- "{{ .image.registry }}/{{ .image.repository }}:{{ .image.tag }}"
+- "{{ .configGeneral.docker_image }}"
+- "{{ .configLogicalBackup.logical_backup_docker_image }}"
+- "{{ .configConnectionPooler.connection_pooler_image }}"
+- "{{ .relok8s_custom.busybox.image }}"
+- "{{ .relok8s_custom.postgres.image }}"

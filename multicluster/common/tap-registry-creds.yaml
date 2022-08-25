@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tap-registry
+  namespace: tap-install
+type: kubernetes.io/dockerconfigjson
+stringData:
+  .dockerconfigjson: |
+    {
+      "auths": {
+        "your-private-registry-fqdn": {
+          "username": "your-pull-user",
+          "password": "your-password"
+        }
+      }
+    }
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretExport
+metadata:
+  name: tap-registry
+  namespace: tap-install
+spec:
+  toNamespaces:
+  - '*'

@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: overlay-cnrs
+  namespace: tap-install
+stringData:
+  overlay.yaml: |
+    #@ load("@ytt:overlay","overlay")
+
+    #@overlay/match by=overlay.subset({"metadata":{"name":"config-network"}})
+    ---
+    data:
+      #@overlay/remove missing_ok=True
+      _example:
+      #@overlay/match missing_ok=True
+      default-external-scheme: https
+      #@overlay/match missing_ok=True
+      httpProtocol: "Redirected"
+
+    ---
+    #@overlay/match by=overlay.subset({"metadata":{"name":"config-certmanager"}})
+    ---
+    data:
+      #@overlay/remove missing_ok=True
+      _example:
+
+    #@overlay/match by=overlay.subset({"metadata":{"name":"config-autoscaler"}})
+    ---
+    data:
+      #@overlay/remove missing_ok=True
+      _example:
+      #@overlay/match missing_ok=True
+      enable-scale-to-zero: "true"
+      #@overlay/match missing_ok=True
+      scale-to-zero-pod-retention-period: "15m"
+
+    #@overlay/match by=overlay.subset({"metadata":{"name":"config-gc"}})
+    ---
+    data:
+      #@overlay/remove missing_ok=True
+      _example:
+      #@overlay/match missing_ok=True
+      retain-since-create-time: "24h"
+      #@overlay/match missing_ok=True
+      retain-since-last-active-time: "4h"
+      #@overlay/match missing_ok=True
+      min-non-active-revisions: "2"
+      #@overlay/match missing_ok=True
+      max-non-active-revisions: "10"
+
+    #@ def kapp_config():
+    apiVersion: kapp.k14s.io/v1alpha1
+    kind: Config
+    #@ end
+
+    #@overlay/match by=overlay.subset(kapp_config())
+    ---
+    rebaseRules:
+    #@overlay/append
+    - path: [data]
+      type: copy
+      sources: [new, existing]
+      resourceMatchers:
+      - kindNamespaceNameMatcher: {kind: ConfigMap, namespace: knative-serving, name: config-domain}
+      - kindNamespaceNameMatcher: {kind: ConfigMap, namespace: knative-serving, name: config-network}
+      - kindNamespaceNameMatcher: {kind: ConfigMap, namespace: knative-serving, name: config-certmanager}
+      - kindNamespaceNameMatcher: {kind: ConfigMap, namespace: knative-serving, name: config-autoscaler}
+      - kindNamespaceNameMatcher: {kind: ConfigMap, namespace: knative-serving, name: config-contour}
